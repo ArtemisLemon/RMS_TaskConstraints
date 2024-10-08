@@ -3,12 +3,254 @@
  */
 package org.example;
 
-public class App {
-    public String getGreeting() {
-        return "Hello World!";
-    }
+import java.util.stream.IntStream;
+import java.util.Arrays;
 
+import org.chocosolver.util.ESat;
+import org.chocosolver.util.tools.ArrayUtils;
+import org.chocosolver.solver.Model;
+import org.chocosolver.solver.Solution;
+import org.chocosolver.solver.Solver;
+import org.chocosolver.solver.constraints.Constraint;
+import org.chocosolver.solver.constraints.Propagator;
+import org.chocosolver.solver.constraints.nary.cnf.LogOp;
+import org.chocosolver.solver.exception.ContradictionException;
+import org.chocosolver.solver.search.strategy.Search;
+import org.chocosolver.solver.search.strategy.selectors.values.IntValueSelector;
+import org.chocosolver.solver.search.strategy.strategy.IntStrategy;
+import org.chocosolver.solver.variables.BoolVar;
+import org.chocosolver.solver.variables.IntVar;
+import org.example.AdjList;
+
+public class App {
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        Model m = new Model();
+        
+        // data
+        int S=4;
+        int T=43;
+        int M=24;
+        int C=10;
+        int N=10;
+ 
+        int sd_counter=0;
+        int md_counter=0;
+        int ec_counter=0;
+        int pc_counter=0;
+        int mc_counter=0;
+
+        // Task Precedence
+        int[] prev = {
+            0,0,1,2,3,4,4,4,4,4,
+            4,4,5,6,7,8,9,9,9,9,
+            7,7,7,7,6,5,7,6,8,7,
+            10,20,30,22,23,34,23,12,14,15,
+            15,16,17
+        };
+
+        IntVar dummy = m.intVar(0);
+
+        IntVar[][] t2c = new IntVar[T][2];
+        for(int i=0;i<5;i++){
+            t2c[i][0]= m.intVar(1);
+            t2c[i][1]= m.intVar(3);
+        }
+        for(int i=5;i<20;i++){
+            t2c[i][0]= m.intVar(2);
+            t2c[i][1]= m.intVar(5);
+        }
+        for(int i=20;i<T;i++){
+            t2c[i][0]= m.intVar(2);
+            t2c[i][1]= m.intVar(3);
+        }
+
+        IntVar[][] m2c = new IntVar[M+1][N];
+        for(int j=0;j<N;j++)
+            m2c[0][j]= dummy;
+        for(int i=1;i<7;i++){
+            m2c[i][0]= m.intVar(1);
+            m2c[i][1]= m.intVar(3);
+            m2c[i][2]= m.intVar(4);
+            for(int j=3;j<N;j++)
+                m2c[i][j]= dummy;
+        }
+        for(int i=7;i<20;i++){
+            m2c[i][0]= m.intVar(2);
+            m2c[i][1]= m.intVar(5);
+            m2c[i][2]= m.intVar(3);
+            for(int j=3;j<N;j++)
+                m2c[i][j]= dummy;
+        }
+        for(int i=20;i<=M;i++){
+            m2c[i][0]= m.intVar(2);
+            m2c[i][1]= m.intVar(3);
+            m2c[i][2]= m.intVar(4);
+            for(int j=3;j<N;j++)
+                m2c[i][j]= dummy;
+        }
+        
+        int[][] task2machinesATOL = new int[T][];
+        for(int i=0;i<5;i++){
+            task2machinesATOL[i] = IntStream.range(0, 7).toArray();
+        }
+        int[] zero = {0};
+        for(int i=5;i<20;i++){
+            task2machinesATOL[i] = IntStream.concat(Arrays.stream(zero),IntStream.range(7, 20)).toArray();
+        }
+        for(int i=20;i<T;i++){
+            task2machinesATOL[i] = IntStream.concat(Arrays.stream(zero),IntStream.range(7, 25)).toArray();
+        }
+
+        // ConstMachines
+        int[][] ConstMachines = {
+            {1,2,3,0,0,0,0,0,0,0},
+            {10,11,12,0,0,0,0,0,0,0},
+            {13,14,15,0,0,0,0,0,0,0},
+            {16,17,18,0,0,0,0,0,0,0}
+        };
+
+
+        // Factory Attributes
+        int budget = 50;
+
+        // Stage Attributes
+        int[] stageId = {0,10,20,30,40};
+        int[] maxMachines = {6,6,6,6};
+
+        // Machine Attributes
+        int[] machineCosts = {0,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3};
+
+        // Task 2 Stage Link Variables
+        IntVar[] t2s = m.intVarArray("t2s",T, 1,S);
+        sd_counter+=T;
+
+
+        // Stage 2 Machine Link Variables
+        IntVar[][] s2m = m.intVarMatrix("s2m",S,N,0,M);
+        md_counter+=S*N;
+        // Stage 2 Machine Containment CSP
+        // IntVar[][] s2m_occ = m.intVarMatrix("s2m_occ",S,M,0,1); //except for dummy
+        IntVar[] s2m_occ = new IntVar[M+1];
+        s2m_occ[0] = m.intVar(0,N*S);
+        for(int i=1;i<M+1;i++){
+            s2m_occ[i] = m.intVar(0,1);
+        }
+        int[] machinesDomain = IntStream.range(0, M+1).toArray();
+        int[] charDomain = IntStream.range(0, C+1).toArray();
+        m.globalCardinality(ArrayUtils.flatten(s2m), machinesDomain, s2m_occ, true).post();;
+
+        // Stage 2 Machine Size CSPs
+        for(int i=0;i<S;i++){
+            IntVar darc = m.count("darc", 0, s2m[i]);
+            IntVar card = darc.mul(-1).add(N).intVar();
+            m.arithm(card,"<",maxMachines[i]).post();
+            m.arithm(card,">=",1).post();
+        }
+
+        
+        // Factory Budget CSP
+        // NavOrAttribCall Vars and Elements
+        IntVar[][] s2mCosts = m.intVarMatrix(S, N, 0,10);
+        for(int i=0;i<S;i++){
+            for(int j=0;j<N;j++){
+                m.element(s2mCosts[i][j], machineCosts,s2m[i][j]).post();
+            }
+        }
+        IntVar sum = m.intVar(0, budget);
+        m.sum(ArrayUtils.flatten(s2mCosts),"=",sum).post();
+        m.arithm(sum, "<=", budget).post();
+        m.arithm(sum, ">=", 3).post();
+
+
+        // Task Precedence CSPs
+        // NavOrAttribCall Vars and Elements
+        IntVar[] t2sStageId = m.intVarArray(T,10,40);
+        for(int i=0;i<T;i++){
+            m.element(t2sStageId[i],stageId,t2s[i]).post();
+            if (i==0) continue;
+
+            m.arithm(t2sStageId[i],">=",t2sStageId[prev[i]]).post();
+        }
+
+
+        // for(int i=0;i<S;i++)
+        //     for(int j=0;j<N;j++){
+        //         m.member(s2m[i][j], ConstMachines[i][j],ConstMachines[i][j]).post();
+        //     }
+
+        // Task Char
+        // NavOrAttribCall Vars and Elements
+        IntVar[][] t2sMachines = m.intVarMatrix(T,N,0,24);
+        md_counter+=T*N;
+        
+        IntVar[] dummies = new IntVar[N];
+        for(int i=0;i<N;i++) dummies[i]=dummy;
+
+        boolean ATOL_PREPROC = true; //same answer as the question: do I want a solution?
+
+        for(int t=0;t<T;t++){
+            // IntVar[] occTchar = m.intVarArray(C+1, 0,10); //ATOL removes
+            // BoolVar[] occTchar_b = m.boolVarArray(C+1); //ATOL removes
+            // m.globalCardinality(t2c[t], charDomain, occTchar, true).post(); //ATOL removes
+            // for(int c=1;c<=C;c++) //ATOL removes
+            //     m.reifyXeqC(occTchar[c], 0, occTchar_b[c]); //ATOL removes
+
+            for(int l=0;l<N;l++){
+                IntVar pointer = t2s[t].mul(N).add(l).intVar();
+                pc_counter+=1;
+                // md_counter+=1;
+                m.element(t2sMachines[t][l],ArrayUtils.concat(dummies, ArrayUtils.flatten(s2m)),pointer,0).post();
+                ec_counter+=1;
+                // if(ATOL_PREPROC){
+                    m.member(t2sMachines[t][l], task2machinesATOL[t]).post(); //ATOL Calc Replaces below
+                    mc_counter++;
+                // } else {
+
+                    // IntVar[][] t2s2mChar = m.intVarMatrix("t2s2mChar",N, N, 0,10);
+                    // IntVar[] t2s2mCharOcc = m.intVarArray("t2s2mCharOcc",C+1, 0,10);
+                    // BoolVar[] t2s2mCharOcc_b = m.boolVarArray(C+1);
+                    
+                    // BoolVar b = m.boolVar();
+                    // m.reifyXneC(t2sMachines[t][l], 0, b);
+
+                    // Constraint gcc = m.globalCardinality(t2s2mChar[l], charDomain, t2s2mCharOcc, true);
+                    // m.ifThen(b, gcc);
+                    // // gcc.post();
+                    // for(int ll=0;ll<N;ll++){
+                    //     IntVar ppointer = t2sMachines[t][l].mul(N).add(ll).intVar();
+                    //     Constraint e = m.element(t2s2mChar[l][ll], ArrayUtils.flatten(m2c), ppointer,0);
+                    //     // m.ifThen(b, e);
+                    //     e.post();
+                    // }
+                    // for(int c=1;c<=C;c++){
+                    //     m.reifyXeqC(t2s2mCharOcc[c], 0, t2s2mCharOcc_b[c]);
+
+                    //     Constraint inc = m.or(occTchar_b[c].not(),t2s2mCharOcc_b[c]);
+                    //     m.ifThen(b, inc);
+                    // }
+                // }
+            }
+        }
+        
+        
+        System.out.println(m.toString());
+        System.out.println(m.getNbVars());
+        System.out.println(m.getNbBoolVar());
+        System.out.println(m.getNbIntVar(false));
+        System.out.println(m.getNbCstrs());
+
+        // System.out.println("{},{}".format(null, args))
+        System.out.println(String.format("sd: %d, md: %d", sd_counter, md_counter));
+        System.out.println(String.format("ec: %d, pc: %d, mc: %d", ec_counter, pc_counter, mc_counter));
+
+        // first search in decision variables, then search over ther rest
+        m.getSolver().setSearch(Search.intVarSearch(ArrayUtils.concat(ArrayUtils.flatten(s2m),t2s)), Search.inputOrderLBSearch(m.retrieveIntVars(true)));
+
+        Solution solution = m.getSolver().findSolution();
+        if(solution != null){
+            System.out.println(solution.toString());
+        } else {
+            System.out.println("mmh");
+        }
     }
 }

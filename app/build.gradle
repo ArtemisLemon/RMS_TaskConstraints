@@ -17,12 +17,12 @@ repositories {
 
 dependencies {
     // Use JUnit Jupiter for testing.
-    testImplementation libs.junit.jupiter
-
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
 
     // This dependency is used by the application.
-    implementation libs.guava
+    implementation group: 'org.javatuples', name: 'javatuples', version: '1.2'
+    // https://mvnrepository.com/artifact/org.choco-solver/choco-solver
+    implementation group: 'org.choco-solver', name: 'choco-solver', version: '4.10.14'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -37,7 +37,7 @@ application {
     mainClass = 'org.example.App'
 }
 
-tasks.named('test') {
-    // Use JUnit Platform for unit tests.
-    useJUnitPlatform()
-}
+// tasks.named('test') {
+//     // Use JUnit Platform for unit tests.
+//     useJUnitPlatform()
+// }
