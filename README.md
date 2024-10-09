@@ -14,3 +14,10 @@ context Task inv SameCharacteristic:
 context Task inv Precedence:
   self.prev.stage =< self.stage
 ```
+
+
+This also demonstraits our refactoring around annotation, the original charachteristics constraint being:
+```
+context Task inv SameCharacteristic:
+  self.var(stage).var(machines).forall(m | m.characteristics->includesAll(self.characteristics))
+```
