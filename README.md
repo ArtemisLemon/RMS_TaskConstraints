@@ -14,10 +14,20 @@ context Task inv SameCharacteristic:
 context Task inv Precedence:
   self.prev.stage =< self.stage
 ```
+## Compilation & exécution
+```bash
+# build
+./gradlew build
+
+# run
+./gradlew run
+```
 
 
-This also demonstraits our refactoring around annotation, the original charachteristics constraint being:
+## OCL Refactor
+This also demonstraits our refactoring around annotations, the original charachteristics constraint being:
 ```
 context Task inv SameCharacteristic:
   self.var(stage).var(machines).forall(m | m.characteristics->includesAll(self.characteristics))
 ```
+in the refactor, we determine candidates and constraint the variable query `self.var(stage).var(machines) to be among them.
