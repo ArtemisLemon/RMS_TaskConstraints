@@ -117,7 +117,7 @@ public class App {
         IntVar[] t2s = m.intVarArray("t2s",T, 1,S);
         sd_counter+=T;
 
-
+        // UML CSP
         // Stage 2 Machine Link Variables
         IntVar[][] s2m = m.intVarMatrix("s2m",S,N,0,M);
         md_counter+=S*N;
@@ -130,8 +130,11 @@ public class App {
         }
         int[] machinesDomain = IntStream.range(0, M+1).toArray();
         int[] charDomain = IntStream.range(0, C+1).toArray();
-        m.globalCardinality(ArrayUtils.flatten(s2m), machinesDomain, s2m_occ, true).post();;
+        m.globalCardinality(ArrayUtils.flatten(s2m), machinesDomain, s2m_occ, true).post(); //containment
 
+
+        
+        // OCL CSP
         // Stage 2 Machine Size CSPs
         for(int i=0;i<S;i++){
             IntVar darc = m.count("darc", 0, s2m[i]);
@@ -244,6 +247,19 @@ public class App {
         Solution solution = m.getSolver().findSolution();
         if(solution != null){
             // System.out.println(solution.toString());
+
+            for(int i=0;i<T;i++){
+                System.out.println("Task "+(i+1)+" : stage="+t2s[i].getValue());
+            }
+
+            for(int i=0;i<S;i++) {
+                String out = "Stage "+(i+1)+" : machines={"+s2m[i][0].getValue();
+                for(int j=1;j<N;j++){
+                    out += ","+s2m[i][j].getValue();
+                }
+                System.out.println(out+"}");
+            }
+
             m.getSolver().printStatistics();
         } else {
             System.out.println("mmh");
