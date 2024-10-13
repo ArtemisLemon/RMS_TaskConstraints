@@ -6,21 +6,11 @@ package org.example;
 import java.util.stream.IntStream;
 import java.util.Arrays;
 
-import org.chocosolver.util.ESat;
 import org.chocosolver.util.tools.ArrayUtils;
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solution;
-import org.chocosolver.solver.Solver;
-import org.chocosolver.solver.constraints.Constraint;
-import org.chocosolver.solver.constraints.Propagator;
-import org.chocosolver.solver.constraints.nary.cnf.LogOp;
-import org.chocosolver.solver.exception.ContradictionException;
 import org.chocosolver.solver.search.strategy.Search;
-import org.chocosolver.solver.search.strategy.selectors.values.IntValueSelector;
-import org.chocosolver.solver.search.strategy.strategy.IntStrategy;
-import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
-import org.example.AdjList;
 
 public class App {
     public static void main(String[] args) {
@@ -31,7 +21,7 @@ public class App {
         int T=43;
         int M=24;
         int C=10;
-        int N=10;
+        int N=24;
  
         int sd_counter=0;
         int md_counter=0;
@@ -148,18 +138,18 @@ public class App {
         }
 
         
-        // Factory Budget CSP
-        // NavOrAttribCall Vars and Elements
-        IntVar[][] s2mCosts = m.intVarMatrix(S, N, 0,10);
-        for(int i=0;i<S;i++){
-            for(int j=0;j<N;j++){
-                m.element(s2mCosts[i][j], machineCosts,s2m[i][j]).post();
-            }
-        }
-        IntVar sum = m.intVar(0, budget);
-        m.sum(ArrayUtils.flatten(s2mCosts),"=",sum).post();
-        m.arithm(sum, "<=", budget).post();
-        m.arithm(sum, ">=", 3).post();
+        // // Factory Budget CSP
+        // // NavOrAttribCall Vars and Elements
+        // IntVar[][] s2mCosts = m.intVarMatrix(S, N, 0,10);
+        // for(int i=0;i<S;i++){
+        //     for(int j=0;j<N;j++){
+        //         m.element(s2mCosts[i][j], machineCosts,s2m[i][j]).post();
+        //     }
+        // }
+        // IntVar sum = m.intVar(0, budget);
+        // m.sum(ArrayUtils.flatten(s2mCosts),"=",sum).post();
+        // m.arithm(sum, "<=", budget).post();
+        // m.arithm(sum, ">=", 3).post();
 
 
         // Task Precedence CSPs
@@ -186,7 +176,7 @@ public class App {
         IntVar[] dummies = new IntVar[N];
         for(int i=0;i<N;i++) dummies[i]=dummy;
 
-        boolean ATOL_PREPROC = true; //same answer as the question: do I want a solution?
+        // boolean ATOL_PREPROC = true; //same answer as the question: do I want a solution?
 
         for(int t=0;t<T;t++){
             // IntVar[] occTchar = m.intVarArray(C+1, 0,10); //ATOL removes
@@ -206,28 +196,28 @@ public class App {
                     mc_counter++;
                 // } else {
 
-                    // IntVar[][] t2s2mChar = m.intVarMatrix("t2s2mChar",N, N, 0,10);
-                    // IntVar[] t2s2mCharOcc = m.intVarArray("t2s2mCharOcc",C+1, 0,10);
-                    // BoolVar[] t2s2mCharOcc_b = m.boolVarArray(C+1);
+                //     IntVar[][] t2s2mChar = m.intVarMatrix("t2s2mChar",N, N, 0,10);
+                //     IntVar[] t2s2mCharOcc = m.intVarArray("t2s2mCharOcc",C+1, 0,10);
+                //     BoolVar[] t2s2mCharOcc_b = m.boolVarArray(C+1);
                     
-                    // BoolVar b = m.boolVar();
-                    // m.reifyXneC(t2sMachines[t][l], 0, b);
+                //     BoolVar b = m.boolVar();
+                //     m.reifyXneC(t2sMachines[t][l], 0, b);
 
-                    // Constraint gcc = m.globalCardinality(t2s2mChar[l], charDomain, t2s2mCharOcc, true);
-                    // m.ifThen(b, gcc);
-                    // // gcc.post();
-                    // for(int ll=0;ll<N;ll++){
-                    //     IntVar ppointer = t2sMachines[t][l].mul(N).add(ll).intVar();
-                    //     Constraint e = m.element(t2s2mChar[l][ll], ArrayUtils.flatten(m2c), ppointer,0);
-                    //     // m.ifThen(b, e);
-                    //     e.post();
-                    // }
-                    // for(int c=1;c<=C;c++){
-                    //     m.reifyXeqC(t2s2mCharOcc[c], 0, t2s2mCharOcc_b[c]);
+                //     Constraint gcc = m.globalCardinality(t2s2mChar[l], charDomain, t2s2mCharOcc, true);
+                //     m.ifThen(b, gcc);
+                //     // gcc.post();
+                //     for(int ll=0;ll<N;ll++){
+                //         IntVar ppointer = t2sMachines[t][l].mul(N).add(ll).intVar();
+                //         Constraint e = m.element(t2s2mChar[l][ll], ArrayUtils.flatten(m2c), ppointer,0);
+                //         m.ifThen(b, e);
+                //         // e.post();
+                //     }
+                //     for(int c=1;c<=C;c++){
+                //         m.reifyXeqC(t2s2mCharOcc[c], 0, t2s2mCharOcc_b[c]);
 
-                    //     Constraint inc = m.or(occTchar_b[c].not(),t2s2mCharOcc_b[c]);
-                    //     m.ifThen(b, inc);
-                    // }
+                //         Constraint inc = m.or(occTchar_b[c].not(),t2s2mCharOcc_b[c]);
+                //         m.ifThen(b, inc);
+                //     }
                 // }
             }
         }
@@ -248,7 +238,8 @@ public class App {
 
         Solution solution = m.getSolver().findSolution();
         if(solution != null){
-            System.out.println(solution.toString());
+            // System.out.println(solution.toString());
+            m.getSolver().printStatistics();
         } else {
             System.out.println("mmh");
         }
