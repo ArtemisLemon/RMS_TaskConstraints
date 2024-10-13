@@ -40,6 +40,7 @@ public class App {
 
         IntVar dummy = m.intVar(0);
 
+        // Task Characteristics
         IntVar[][] t2c = new IntVar[T][2];
         for(int i=0;i<5;i++){
             t2c[i][0]= m.intVar(1);
@@ -54,6 +55,7 @@ public class App {
             t2c[i][1]= m.intVar(3);
         }
 
+        // Machine Characteristics
         IntVar[][] m2c = new IntVar[M+1][N];
         for(int j=0;j<N;j++)
             m2c[0][j]= dummy;
@@ -79,6 +81,7 @@ public class App {
                 m2c[i][j]= dummy;
         }
         
+        // Result of Proprocessing : Machines.AllInstances()->select(m|m.characteristics->includesAll(self.characteristics))
         int[][] task2machinesATOL = new int[T][];
         for(int i=0;i<5;i++){
             task2machinesATOL[i] = IntStream.range(0, 7).toArray();
@@ -91,7 +94,7 @@ public class App {
             task2machinesATOL[i] = IntStream.concat(Arrays.stream(zero),IntStream.range(7, 25)).toArray();
         }
 
-        // ConstMachines
+        // ConstMachines : Constant links between stage and machines
         int[][] ConstMachines = {
             {1,2,3,0,0,0,0,0,0,0},
             {10,11,12,0,0,0,0,0,0,0},
@@ -138,18 +141,18 @@ public class App {
         }
 
         
-        // // Factory Budget CSP
-        // // NavOrAttribCall Vars and Elements
-        // IntVar[][] s2mCosts = m.intVarMatrix(S, N, 0,10);
-        // for(int i=0;i<S;i++){
-        //     for(int j=0;j<N;j++){
-        //         m.element(s2mCosts[i][j], machineCosts,s2m[i][j]).post();
-        //     }
-        // }
-        // IntVar sum = m.intVar(0, budget);
-        // m.sum(ArrayUtils.flatten(s2mCosts),"=",sum).post();
-        // m.arithm(sum, "<=", budget).post();
-        // m.arithm(sum, ">=", 3).post();
+        // Factory Budget CSP
+        // NavOrAttribCall Vars and Elements
+        IntVar[][] s2mCosts = m.intVarMatrix(S, N, 0,10);
+        for(int i=0;i<S;i++){
+            for(int j=0;j<N;j++){
+                m.element(s2mCosts[i][j], machineCosts,s2m[i][j]).post();
+            }
+        }
+        IntVar sum = m.intVar(0, budget);
+        m.sum(ArrayUtils.flatten(s2mCosts),"=",sum).post();
+        m.arithm(sum, "<=", budget).post();
+        m.arithm(sum, ">=", 3).post();
 
 
         // Task Precedence CSPs
@@ -163,6 +166,7 @@ public class App {
         }
 
 
+        // Apply Constant Machines Scenario
         // for(int i=0;i<S;i++)
         //     for(int j=0;j<N;j++){
         //         m.member(s2m[i][j], ConstMachines[i][j],ConstMachines[i][j]).post();
@@ -195,6 +199,7 @@ public class App {
                     m.member(t2sMachines[t][l], task2machinesATOL[t]).post(); //ATOL Calc Replaces below
                     mc_counter++;
                 // } else {
+                        // This models (self.stage.machines).forall(m|m.characteristics->includesAll(self.characteristics))
 
                 //     IntVar[][] t2s2mChar = m.intVarMatrix("t2s2mChar",N, N, 0,10);
                 //     IntVar[] t2s2mCharOcc = m.intVarArray("t2s2mCharOcc",C+1, 0,10);
